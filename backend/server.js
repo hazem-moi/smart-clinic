@@ -10,6 +10,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Smart Clinic API — واجهة برمجية فقط بلا صفحة رئيسية',
+    health: '/api/health',
+  });
+});
+
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 app.use('/api/auth', authRoutes);
