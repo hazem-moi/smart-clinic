@@ -5,11 +5,29 @@ const bcrypt = require('bcryptjs');
 const DEMO_PASSWORD = '123456';
 
 const demoUsers = [
+  // أطباء - أطفال (specialty 1)
   { full_name: 'د. سامر خليل', mail: 'samer.doctor@clinic.com', role: 'doctor', specialty_id: 1, fee: 15000 },
+  { full_name: 'د. كريم عبدالله', mail: 'kareem.doctor@clinic.com', role: 'doctor', specialty_id: 1, fee: 16000 },
+  // أطباء - قلبية (specialty 2)
   { full_name: 'د. ليلى حسن', mail: 'layla.doctor@clinic.com', role: 'doctor', specialty_id: 2, fee: 25000 },
+  { full_name: 'د. نور الدين حمزة', mail: 'nouraldin.doctor@clinic.com', role: 'doctor', specialty_id: 2, fee: 27000 },
+  // أطباء - أسنان (specialty 3)
   { full_name: 'د. عمر فارس', mail: 'omar.doctor@clinic.com', role: 'doctor', specialty_id: 3, fee: 20000 },
+  { full_name: 'د. ياسمين قاسم', mail: 'yasmin.doctor@clinic.com', role: 'doctor', specialty_id: 3, fee: 19000 },
+  // أطباء - جلدية (specialty 4)
   { full_name: 'د. رنا يوسف', mail: 'rana.doctor@clinic.com', role: 'doctor', specialty_id: 4, fee: 18000 },
+  { full_name: 'د. طارق سلامة', mail: 'tarek.doctor@clinic.com', role: 'doctor', specialty_id: 4, fee: 17000 },
+  // أطباء - عيون (specialty 5)
+  { full_name: 'د. هبة مراد', mail: 'heba.doctor@clinic.com', role: 'doctor', specialty_id: 5, fee: 22000 },
+  { full_name: 'د. زياد نجار', mail: 'ziad.doctor@clinic.com', role: 'doctor', specialty_id: 5, fee: 21000 },
+
+  // مرضى
   { full_name: 'محمد أحمد', mail: 'patient@clinic.com', role: 'patient' },
+  { full_name: 'سارة إبراهيم', mail: 'sara.patient@clinic.com', role: 'patient' },
+  { full_name: 'أحمد الشامي', mail: 'ahmad.patient@clinic.com', role: 'patient' },
+  { full_name: 'لينا خوري', mail: 'lina.patient@clinic.com', role: 'patient' },
+  { full_name: 'يوسف حداد', mail: 'yousef.patient@clinic.com', role: 'patient' },
+  { full_name: 'رهف عيسى', mail: 'rahaf.patient@clinic.com', role: 'patient' },
 ];
 
 async function seed() {

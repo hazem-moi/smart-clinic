@@ -58,7 +58,18 @@ flutter build apk --release
 | البريد | الدور | التخصص |
 |---|---|---|
 | samer.doctor@clinic.com | طبيب | أطفال |
+| kareem.doctor@clinic.com | طبيب | أطفال |
 | layla.doctor@clinic.com | طبيب | قلبية |
+| nouraldin.doctor@clinic.com | طبيب | قلبية |
 | omar.doctor@clinic.com | طبيب | أسنان |
+| yasmin.doctor@clinic.com | طبيب | أسنان |
 | rana.doctor@clinic.com | طبيب | جلدية |
+| tarek.doctor@clinic.com | طبيب | جلدية |
+| heba.doctor@clinic.com | طبيب | عيون |
+| ziad.doctor@clinic.com | طبيب | عيون |
 | patient@clinic.com | مريض | — |
+| sara.patient@clinic.com | مريض | — |
+| ahmad.patient@clinic.com | مريض | — |
+| lina.patient@clinic.com | مريض | — |
+| yousef.patient@clinic.com | مريض | — |
+| rahaf.patient@clinic.com | مريض | — |
