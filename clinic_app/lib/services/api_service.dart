@@ -31,12 +31,22 @@ class ApiService {
     try {
       body = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
-      throw ApiException('تعذر الاتصال بالخادم، حاول مرة أخرى');
+      throw ApiException('الخادم قيد الإحماء، يرجى الانتظار قليلاً والمحاولة مرة أخرى');
     }
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return body;
     }
     throw ApiException(body['error'] as String? ?? 'حدث خطأ غير متوقع');
+  }
+
+  // يُستدعى عند بدء التطبيق لإيقاظ الخادم مبكراً (خطط Render المجانية تُسكِن الخادم
+  // بعد فترة خمول، وأول طلب بعدها قد يستغرق حتى 50 ثانية ليستجيب).
+  Future<void> wakeUp() async {
+    try {
+      await http.get(Uri.parse('$baseUrl/health')).timeout(const Duration(seconds: 60));
+    } catch (_) {
+      // تجاهل أي خطأ هنا؛ الهدف مجرد تنبيه الخادم، والمحاولات الفعلية لاحقاً ستُظهر الخطأ إن استمر.
+    }
   }
 
   Future<Map<String, dynamic>> login(String mail, String password) async {

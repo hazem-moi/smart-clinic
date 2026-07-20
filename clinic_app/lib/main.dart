@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
+import 'services/api_service.dart';
 import 'services/session.dart';
 import 'screens/login_screen.dart';
 import 'screens/patient_dashboard.dart';
 import 'screens/doctor_dashboard.dart';
 
 void main() {
+  ApiService().wakeUp();
   runApp(
     ChangeNotifierProvider(
       create: (_) => Session()..restore(),
