@@ -1,0 +1,5 @@
+node_modules/
+.env
+*.log
+clinic_app/run_web.bat
+clinic_app/serve_web.js

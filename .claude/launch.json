@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "clinic-web",
+      "runtimeExecutable": "C:\\Users\\HM995\\Desktop\\hm\\clinic_app\\run_web.bat",
+      "runtimeArgs": [],
+      "port": 8080
+    }
+  ]
+}
