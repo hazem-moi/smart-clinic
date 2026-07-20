@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../main.dart';
 import '../models/appointment.dart';
 import '../services/api_service.dart';
 import '../services/session.dart';
+import '../widgets/status_chip.dart';
 
 class DoctorDashboard extends StatefulWidget {
   const DoctorDashboard({super.key});
@@ -78,6 +80,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
       appBar: AppBar(
         title: Text('مواعيد اليوم — د. ${session.user?.fullName ?? ''}'),
         actions: [
+          const ThemeToggleButton(),
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'تسجيل الخروج',
@@ -163,9 +166,17 @@ class _AppointmentCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(appointment.patientName ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(appointment.patientName ?? '',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+                StatusChip(status: appointment.status),
+              ],
+            ),
+            const SizedBox(height: 4),
             Text(DateFormat('yyyy/MM/dd — HH:mm').format(appointment.appointmentDate)),
-            Text('الحالة: ${Appointment.statusLabel(appointment.status)}'),
             if (appointment.doctorNotes != null && appointment.doctorNotes!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 4),

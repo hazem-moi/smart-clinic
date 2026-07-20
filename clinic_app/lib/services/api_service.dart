@@ -98,8 +98,8 @@ class ApiService {
         'mail': mail,
         'password': password,
         'role': role,
-        if (specialtyId != null) 'specialty_id': specialtyId,
-        if (consultationFee != null) 'consultation_fee': consultationFee,
+        'specialty_id': ?specialtyId,
+        'consultation_fee': ?consultationFee,
       }),
     );
     return _decode(res) as Map<String, dynamic>;
@@ -122,6 +122,37 @@ class ApiService {
       body: jsonEncode({
         'doctor_id': doctorId,
         'appointment_date': dateTime.toIso8601String(),
+      }),
+    );
+    _decode(res);
+  }
+
+  // الأوقات المحجوزة (HH:mm) لطبيب في يوم معيّن — تُستخدم لتوليد الخانات المتاحة
+  Future<Set<String>> fetchBookedSlots(int doctorId, DateTime date) async {
+    final d = '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+    final uri = Uri.parse('$baseUrl/appointments/booked?doctor_id=$doctorId&date=$d');
+    final list = await _getJson(uri) as List<dynamic>;
+    return list.map((e) => e as String).toSet();
+  }
+
+  Future<void> cancelAppointment(int appointmentId) async {
+    final res = await http.patch(
+      Uri.parse('$baseUrl/appointments/$appointmentId/cancel'),
+      headers: _headers,
+    );
+    _decode(res);
+  }
+
+  Future<void> submitReview({required int appointmentId, required int rating, String? comment}) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/reviews'),
+      headers: _headers,
+      body: jsonEncode({
+        'appointment_id': appointmentId,
+        'rating': rating,
+        if (comment != null && comment.trim().isNotEmpty) 'comment': comment.trim(),
       }),
     );
     _decode(res);

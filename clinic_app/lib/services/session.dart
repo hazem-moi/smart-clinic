@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/app_user.dart';
@@ -8,6 +8,7 @@ class Session extends ChangeNotifier {
   AppUser? user;
   String? token;
   bool ready = false;
+  ThemeMode themeMode = ThemeMode.system;
 
   bool get isLoggedIn => user != null && token != null;
 
@@ -19,7 +20,27 @@ class Session extends ChangeNotifier {
       token = savedToken;
       user = AppUser.fromJson(jsonDecode(savedUser) as Map<String, dynamic>);
     }
+    themeMode = _themeFromName(prefs.getString('themeMode'));
     ready = true;
+    notifyListeners();
+  }
+
+  static ThemeMode _themeFromName(String? name) {
+    switch (name) {
+      case 'dark':
+        return ThemeMode.dark;
+      case 'light':
+        return ThemeMode.light;
+      default:
+        return ThemeMode.system;
+    }
+  }
+
+  // يبدّل بين الفاتح والداكن (أي وضع نظام يُعامَل كفاتح عند أول ضغطة)
+  Future<void> toggleTheme() async {
+    themeMode = themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('themeMode', themeMode.name);
     notifyListeners();
   }
 

@@ -18,6 +18,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameCtrl = TextEditingController();
   final _mailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
   final _feeCtrl = TextEditingController();
 
   String _role = 'patient';
@@ -52,6 +53,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _nameCtrl.dispose();
     _mailCtrl.dispose();
     _passCtrl.dispose();
+    _confirmCtrl.dispose();
     _feeCtrl.dispose();
     super.dispose();
   }
@@ -129,6 +131,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       obscureText: true,
                       decoration: const InputDecoration(labelText: 'كلمة السر'),
                       validator: (v) => (v == null || v.length < 6) ? 'كلمة السر 6 أحرف على الأقل' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _confirmCtrl,
+                      obscureText: true,
+                      decoration: const InputDecoration(labelText: 'تأكيد كلمة السر'),
+                      validator: (v) => (v != _passCtrl.text) ? 'كلمتا السر غير متطابقتين' : null,
                     ),
                     if (_role == 'doctor') ...[
                       const SizedBox(height: 16),

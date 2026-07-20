@@ -16,7 +16,9 @@ class BookingScreen extends StatefulWidget {
 
 class _BookingScreenState extends State<BookingScreen> {
   DateTime? _date;
-  TimeOfDay? _time;
+  String? _selectedSlot; // "HH:mm"
+  List<String> _slots = [];
+  bool _loadingSlots = false;
   bool _submitting = false;
   String? _error;
 
@@ -28,24 +30,57 @@ class _BookingScreenState extends State<BookingScreen> {
       firstDate: now,
       lastDate: now.add(const Duration(days: 180)),
     );
-    if (picked != null) setState(() => _date = picked);
+    if (picked != null) {
+      setState(() {
+        _date = picked;
+        _selectedSlot = null;
+        _error = null;
+      });
+      await _loadSlots();
+    }
   }
 
-  Future<void> _pickTime() async {
-    final picked = await showTimePicker(context: context, initialTime: TimeOfDay.now());
-    if (picked != null) setState(() => _time = picked);
+  Future<void> _loadSlots() async {
+    if (_date == null) return;
+    setState(() {
+      _loadingSlots = true;
+      _slots = [];
+    });
+    try {
+      final session = context.read<Session>();
+      final booked = await ApiService(token: session.token).fetchBookedSlots(widget.doctor.id, _date!);
+      setState(() => _slots = _generateSlots(booked));
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loadingSlots = false);
+    }
+  }
+
+  // يولّد خانات الدوام مستبعداً المحجوزة والماضية (إن كان التاريخ اليوم)
+  List<String> _generateSlots(Set<String> booked) {
+    final d = widget.doctor;
+    final now = DateTime.now();
+    final isToday = _date!.year == now.year && _date!.month == now.month && _date!.day == now.day;
+    final slots = <String>[];
+    for (var h = d.workStartHour; h < d.workEndHour; h++) {
+      for (var m = 0; m < 60; m += d.slotMinutes) {
+        final label = '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+        if (booked.contains(label)) continue;
+        if (isToday && DateTime(_date!.year, _date!.month, _date!.day, h, m).isBefore(now)) continue;
+        slots.add(label);
+      }
+    }
+    return slots;
   }
 
   Future<void> _confirm() async {
-    if (_date == null || _time == null) {
+    if (_date == null || _selectedSlot == null) {
       setState(() => _error = 'يرجى اختيار التاريخ والوقت');
       return;
     }
-    final dateTime = DateTime(_date!.year, _date!.month, _date!.day, _time!.hour, _time!.minute);
-    if (dateTime.isBefore(DateTime.now())) {
-      setState(() => _error = 'لا يمكن اختيار وقت في الماضي');
-      return;
-    }
+    final parts = _selectedSlot!.split(':');
+    final dateTime = DateTime(_date!.year, _date!.month, _date!.day, int.parse(parts[0]), int.parse(parts[1]));
 
     setState(() {
       _submitting = true;
@@ -73,7 +108,7 @@ class _BookingScreenState extends State<BookingScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
+            constraints: const BoxConstraints(maxWidth: 480),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -86,6 +121,10 @@ class _BookingScreenState extends State<BookingScreen> {
                         Text(widget.doctor.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                         Text(widget.doctor.specialty),
                         Text('سعر الكشفية: ${widget.doctor.consultationFee.toStringAsFixed(0)}'),
+                        Text(
+                          'الدوام: ${widget.doctor.workStartHour}:00 - ${widget.doctor.workEndHour}:00',
+                          style: const TextStyle(fontSize: 13),
+                        ),
                       ],
                     ),
                   ),
@@ -96,19 +135,15 @@ class _BookingScreenState extends State<BookingScreen> {
                   icon: const Icon(Icons.calendar_today_outlined),
                   label: Text(_date == null ? 'اختر التاريخ' : DateFormat('yyyy/MM/dd').format(_date!)),
                 ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _pickTime,
-                  icon: const Icon(Icons.access_time_outlined),
-                  label: Text(_time == null ? 'اختر الوقت' : _time!.format(context)),
-                ),
+                const SizedBox(height: 16),
+                if (_date != null) _buildSlotSection(),
                 if (_error != null) ...[
                   const SizedBox(height: 12),
                   Text(_error!, style: const TextStyle(color: Colors.red)),
                 ],
                 const SizedBox(height: 24),
                 FilledButton(
-                  onPressed: _submitting ? null : _confirm,
+                  onPressed: (_submitting || _selectedSlot == null) ? null : _confirm,
                   child: _submitting
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Text('تأكيد الحجز'),
@@ -118,6 +153,39 @@ class _BookingScreenState extends State<BookingScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSlotSection() {
+    if (_loadingSlots) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_slots.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Text('لا توجد أوقات متاحة في هذا اليوم، جرّب تاريخاً آخر'),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('الأوقات المتاحة:', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _slots.map((slot) {
+            return ChoiceChip(
+              label: Text(slot),
+              selected: _selectedSlot == slot,
+              onSelected: (_) => setState(() => _selectedSlot = slot),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }

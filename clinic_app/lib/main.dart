@@ -21,8 +21,19 @@ void main() {
 class SmartClinicApp extends StatelessWidget {
   const SmartClinicApp({super.key});
 
+  ThemeData _theme(Brightness brightness) => ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2E7D6B), brightness: brightness),
+        useMaterial3: true,
+        appBarTheme: const AppBarTheme(centerTitle: true),
+        inputDecorationTheme: const InputDecorationTheme(
+          border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
+    final themeMode = context.watch<Session>().themeMode;
     return MaterialApp(
       title: 'العيادة الذكية',
       debugShowCheckedModeBanner: false,
@@ -33,16 +44,25 @@ class SmartClinicApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      theme: ThemeData(
-        colorSchemeSeed: const Color(0xFF2E7D6B),
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(centerTitle: true),
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        ),
-      ),
+      theme: _theme(Brightness.light),
+      darkTheme: _theme(Brightness.dark),
+      themeMode: themeMode,
       home: const RootDecider(),
+    );
+  }
+}
+
+// زر تبديل الوضع الليلي — يُستخدم في أشرطة التطبيق
+class ThemeToggleButton extends StatelessWidget {
+  const ThemeToggleButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return IconButton(
+      tooltip: isDark ? 'الوضع الفاتح' : 'الوضع الليلي',
+      icon: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
+      onPressed: () => context.read<Session>().toggleTheme(),
     );
   }
 }
