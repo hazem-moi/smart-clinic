@@ -11,6 +11,12 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+// استجابة غير-JSON تحديداً (عادة الخادم لم يُكمل الإحماء بعد)، بخلاف أخطاء
+// العمل المعتادة (صلاحيات، تحقق، إلخ) القادمة من الخادم كـ JSON صالح.
+class _ServerWarmingUpException extends ApiException {
+  _ServerWarmingUpException() : super('الخادم قيد الإحماء، يرجى الانتظار قليلاً والمحاولة مرة أخرى');
+}
+
 class ApiService {
   // يمكن تغيير الرابط عند التشغيل عبر: --dart-define=API_URL=https://your-api.onrender.com/api
   static const String baseUrl = String.fromEnvironment(
@@ -26,24 +32,42 @@ class ApiService {
         if (token != null) 'Authorization': 'Bearer $token',
       };
 
+  // الجسم قد يكون كائناً (تسجيل الدخول، الحجز...) أو مصفوفة (قوائم الأطباء
+  // والمواعيد)، لذا لا نفرض نوعاً معيناً هنا؛ كل دالة تُحوِّل الناتج بحسب مسارها.
   dynamic _decode(http.Response res) {
-    Map<String, dynamic> body;
+    dynamic body;
     try {
-      body = jsonDecode(res.body) as Map<String, dynamic>;
+      body = jsonDecode(res.body);
     } catch (_) {
-      throw ApiException('الخادم قيد الإحماء، يرجى الانتظار قليلاً والمحاولة مرة أخرى');
+      throw _ServerWarmingUpException();
     }
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return body;
     }
-    throw ApiException(body['error'] as String? ?? 'حدث خطأ غير متوقع');
+    final message = body is Map<String, dynamic> ? body['error'] as String? : null;
+    throw ApiException(message ?? 'حدث خطأ غير متوقع');
   }
 
-  // يُستدعى عند بدء التطبيق لإيقاظ الخادم مبكراً (خطط Render المجانية تُسكِن الخادم
-  // بعد فترة خمول، وأول طلب بعدها قد يستغرق حتى 50 ثانية ليستجيب).
+  // نفس منطق GET + فك الترميز، مع إعادة محاولة واحدة تلقائية إن كان السبب تحديداً
+  // استجابة غير-JSON (عادة اتصال قاعدة البيانات الأول بعد إيقاظ الخادم من سكونه)،
+  // دون إعادة محاولة أخطاء العمل الفعلية (صلاحيات، تحقق...).
+  Future<dynamic> _getJson(Uri uri) async {
+    try {
+      final res = await http.get(uri, headers: _headers);
+      return _decode(res);
+    } on _ServerWarmingUpException {
+      await Future.delayed(const Duration(seconds: 4));
+      final res = await http.get(uri, headers: _headers);
+      return _decode(res);
+    }
+  }
+
+  // يُستدعى عند بدء التطبيق لإيقاظ الخادم واتصال قاعدة البيانات مبكراً (خطط Render
+  // المجانية تُسكِن الخادم بعد فترة خمول). يستهدف عمداً مساراً يستعلم القاعدة فعلياً
+  // (وليس /health) لأن إنشاء أول اتصال بقاعدة البيانات هو الجزء الأبطأ عادة.
   Future<void> wakeUp() async {
     try {
-      await http.get(Uri.parse('$baseUrl/health')).timeout(const Duration(seconds: 60));
+      await http.get(Uri.parse('$baseUrl/specialties')).timeout(const Duration(seconds: 60));
     } catch (_) {
       // تجاهل أي خطأ هنا؛ الهدف مجرد تنبيه الخادم، والمحاولات الفعلية لاحقاً ستُظهر الخطأ إن استمر.
     }
@@ -82,14 +106,12 @@ class ApiService {
   }
 
   Future<List<Specialty>> fetchSpecialties() async {
-    final res = await http.get(Uri.parse('$baseUrl/specialties'), headers: _headers);
-    final list = _decode(res) as List<dynamic>;
+    final list = await _getJson(Uri.parse('$baseUrl/specialties')) as List<dynamic>;
     return list.map((e) => Specialty.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<List<Doctor>> fetchDoctors() async {
-    final res = await http.get(Uri.parse('$baseUrl/doctors'), headers: _headers);
-    final list = _decode(res) as List<dynamic>;
+    final list = await _getJson(Uri.parse('$baseUrl/doctors')) as List<dynamic>;
     return list.map((e) => Doctor.fromJson(e as Map<String, dynamic>)).toList();
   }
 
@@ -106,15 +128,14 @@ class ApiService {
   }
 
   Future<List<Appointment>> fetchPatientAppointments(int patientId) async {
-    final res = await http.get(Uri.parse('$baseUrl/appointments/patient/$patientId'), headers: _headers);
-    final list = _decode(res) as List<dynamic>;
+    final uri = Uri.parse('$baseUrl/appointments/patient/$patientId');
+    final list = await _getJson(uri) as List<dynamic>;
     return list.map((e) => Appointment.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<List<Appointment>> fetchDoctorAppointments(int doctorId, {bool todayOnly = false}) async {
     final uri = Uri.parse('$baseUrl/appointments/doctor/$doctorId${todayOnly ? '?date=today' : ''}');
-    final res = await http.get(uri, headers: _headers);
-    final list = _decode(res) as List<dynamic>;
+    final list = await _getJson(uri) as List<dynamic>;
     return list.map((e) => Appointment.fromJson(e as Map<String, dynamic>)).toList();
   }
 
