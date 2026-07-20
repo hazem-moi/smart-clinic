@@ -15,7 +15,7 @@ class ApiService {
   // يمكن تغيير الرابط عند التشغيل عبر: --dart-define=API_URL=https://your-api.onrender.com/api
   static const String baseUrl = String.fromEnvironment(
     'API_URL',
-    defaultValue: 'https://smart-clinic-api.onrender.com/api',
+    defaultValue: 'https://smart-clinic-ci4r.onrender.com/api',
   );
 
   final String? token;

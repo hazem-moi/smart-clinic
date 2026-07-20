@@ -3,3 +3,4 @@ node_modules/
 *.log
 clinic_app/run_web.bat
 clinic_app/serve_web.js
+deliverables/*.apk

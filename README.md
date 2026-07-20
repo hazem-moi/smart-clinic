@@ -2,6 +2,9 @@
 
 تطبيق حجز مواعيد بين المرضى والأطباء، مبني بـ Flutter (موبايل + ويب) مع واجهة برمجية Node.js/Express وقاعدة بيانات MySQL.
 
+- المستودع: https://github.com/hazem-moi/smart-clinic
+- الـ API المنشور: https://smart-clinic-ci4r.onrender.com/api (قاعدة البيانات: Clever Cloud MySQL)
+
 ## البنية
 
 ```
@@ -34,14 +37,16 @@ npm start
 ```
 cd clinic_app
 flutter pub get
-flutter run -d chrome --dart-define=API_URL=https://<your-api>.onrender.com/api
+flutter run -d chrome
 ```
+
+رابط الخادم مضبوط افتراضياً في `lib/services/api_service.dart` على الرابط المنشور أعلاه؛ يمكن تجاوزه عبر `--dart-define=API_URL=...` عند الحاجة.
 
 ## بناء الـ APK
 
 ```
 cd clinic_app
-flutter build apk --release --dart-define=API_URL=https://<your-api>.onrender.com/api
+flutter build apk --release
 ```
 
 الملف الناتج: `clinic_app/build/app/outputs/flutter-apk/app-release.apk`
