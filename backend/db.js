@@ -10,6 +10,9 @@ const pool = mysql.createPool({
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
   waitForConnections: true,
   connectionLimit: 10,
+  // نُعيد قيم DATETIME كنص خام "YYYY-MM-DD HH:mm:ss" دون تحويل منطقة زمنية،
+  // كي تتطابق أوقات الخانات المعروضة مع المحجوزة بلا انزياح توقيت بين العميل والخادم.
+  dateStrings: true,
 });
 
 module.exports = pool;

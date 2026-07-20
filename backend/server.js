@@ -5,6 +5,7 @@ const cors = require('cors');
 const authRoutes = require('./routes/auth');
 const doctorsRoutes = require('./routes/doctors');
 const appointmentsRoutes = require('./routes/appointments');
+const reviewsRoutes = require('./routes/reviews');
 
 const app = express();
 app.use(cors());
@@ -23,6 +24,7 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.use('/api/auth', authRoutes);
 app.use('/api', doctorsRoutes);
 app.use('/api/appointments', appointmentsRoutes);
+app.use('/api/reviews', reviewsRoutes);
 
 app.use((req, res) => res.status(404).json({ error: 'المسار غير موجود' }));
 

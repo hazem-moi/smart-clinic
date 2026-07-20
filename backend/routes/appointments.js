@@ -12,8 +12,17 @@ router.post('/', requireAuth, requireRole('patient'), async (req, res) => {
     return res.status(400).json({ error: 'يجب اختيار الطبيب والتاريخ والوقت' });
   }
 
-  const requestedDate = new Date(appointment_date);
-  if (Number.isNaN(requestedDate.getTime()) || requestedDate < new Date()) {
+  // نتوقع توقيتاً محلياً بصيغة "YYYY-MM-DDTHH:mm(:ss)" ونخزّنه كما هو (نصاً محلياً)
+  // دون تحويل منطقة زمنية، حتى تتطابق الأوقات مع منطق الخانات المتاحة.
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(String(appointment_date));
+  if (!m) {
+    return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة' });
+  }
+  const datePart = `${m[1]}-${m[2]}-${m[3]}`;
+  const mysqlDate = `${datePart} ${m[4]}:${m[5]}:00`;
+
+  const today = new Date().toISOString().slice(0, 10);
+  if (datePart < today) {
     return res.status(400).json({ error: 'لا يمكن حجز موعد في تاريخ ماضٍ' });
   }
 
@@ -23,7 +32,6 @@ router.post('/', requireAuth, requireRole('patient'), async (req, res) => {
       return res.status(404).json({ error: 'الطبيب غير موجود' });
     }
 
-    const mysqlDate = requestedDate.toISOString().slice(0, 19).replace('T', ' ');
     const [result] = await pool.execute(
       'INSERT INTO appointments (patient_id, doctor_id, appointment_date, status) VALUES (?, ?, ?, ?)',
       [req.user.id, doctor_id, mysqlDate, 'pending']
@@ -38,6 +46,28 @@ router.post('/', requireAuth, requireRole('patient'), async (req, res) => {
   }
 });
 
+// الأوقات المحجوزة لطبيب في يوم معيّن (لتوليد الخانات المتاحة على العميل)
+router.get('/booked', requireAuth, async (req, res) => {
+  const doctorId = Number(req.query.doctor_id);
+  const dateStr = req.query.date;
+  if (!doctorId || !dateStr) {
+    return res.status(400).json({ error: 'يجب تحديد الطبيب والتاريخ' });
+  }
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT TIME_FORMAT(appointment_date, '%H:%i') AS t
+       FROM appointments
+       WHERE doctor_id = ? AND DATE(appointment_date) = ? AND status <> 'cancelled'`,
+      [doctorId, dateStr]
+    );
+    res.json(rows.map((r) => r.t));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'تعذر جلب الأوقات المحجوزة' });
+  }
+});
+
 // مواعيد مريض معيّن (قادمة وسابقة)
 router.get('/patient/:id', requireAuth, async (req, res) => {
   const patientId = Number(req.params.id);
@@ -48,11 +78,13 @@ router.get('/patient/:id', requireAuth, async (req, res) => {
   try {
     const [rows] = await pool.query(
       `SELECT a.id, a.appointment_date, a.status, a.doctor_notes,
-              u.full_name AS doctor_name, s.name AS specialty
+              u.full_name AS doctor_name, s.name AS specialty,
+              rv.rating AS my_rating
        FROM appointments a
        JOIN doctors d ON d.id = a.doctor_id
        JOIN users u ON u.id = d.user_id
        JOIN specialties s ON s.id = d.specialty_id
+       LEFT JOIN reviews rv ON rv.appointment_id = a.id
        WHERE a.patient_id = ?
        ORDER BY a.appointment_date DESC`,
       [patientId]
@@ -144,6 +176,28 @@ router.patch('/:id/notes', requireAuth, requireRole('doctor'), async (req, res) 
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'تعذر حفظ الملاحظة' });
+  }
+});
+
+// إلغاء الموعد (المريض صاحب الموعد فقط، وقبل إتمامه)
+router.patch('/:id/cancel', requireAuth, requireRole('patient'), async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      'SELECT status FROM appointments WHERE id = ? AND patient_id = ?',
+      [req.params.id, req.user.id]
+    );
+    if (rows.length === 0) {
+      return res.status(403).json({ error: 'لا تملك صلاحية إلغاء هذا الموعد' });
+    }
+    if (rows[0].status === 'completed' || rows[0].status === 'cancelled') {
+      return res.status(400).json({ error: 'لا يمكن إلغاء هذا الموعد' });
+    }
+
+    await pool.execute("UPDATE appointments SET status = 'cancelled' WHERE id = ?", [req.params.id]);
+    res.json({ message: 'تم إلغاء الموعد' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'تعذر إلغاء الموعد' });
   }
 });
 

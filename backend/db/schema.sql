@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS doctors (
   user_id INT NOT NULL UNIQUE,
   specialty_id INT NOT NULL,
   consultation_fee DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  work_start_hour TINYINT NOT NULL DEFAULT 9,   -- بداية الدوام (ساعة اليوم 0-23)
+  work_end_hour TINYINT NOT NULL DEFAULT 17,    -- نهاية الدوام
+  slot_minutes INT NOT NULL DEFAULT 30,         -- مدة الخانة الزمنية بالدقائق
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (specialty_id) REFERENCES specialties(id)
 );
@@ -37,6 +40,20 @@ CREATE TABLE IF NOT EXISTS appointments (
   FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE,
   UNIQUE KEY uniq_doctor_slot (doctor_id, appointment_date)
+);
+
+-- جدول التقييمات: تقييم المريض للطبيب بعد إتمام الفحص (مرة واحدة لكل موعد)
+CREATE TABLE IF NOT EXISTS reviews (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  appointment_id INT NOT NULL UNIQUE,
+  patient_id INT NOT NULL,
+  doctor_id INT NOT NULL,
+  rating TINYINT NOT NULL,               -- من 1 إلى 5
+  comment TEXT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE CASCADE,
+  FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
 );
 
 -- =========================================================
